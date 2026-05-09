@@ -67,12 +67,19 @@
 
 三个内核（Mihomo / Smart / Sing-box）在 Fake-IP 模式下的运行状态，访问检查全绿：
 
-![hero](docs/screenshots/hero-1x3.png)
+![hero](https://raw.githubusercontent.com/kenzok8/kenzok8/main/screenshot/clashoo-hero.png)
 
 <details>
-<summary>展开看 3 内核 × 3 模式 的完整 9 宫格（Fake-IP / TUN / Mixed）</summary>
+<summary>展开看每个内核在 Fake-IP / TUN / Mixed 三种模式下的运行状态</summary>
 
-![grid](docs/screenshots/grid-3x3.png)
+**Mihomo**
+![mihomo](https://raw.githubusercontent.com/kenzok8/kenzok8/main/screenshot/clashoo-mihomo.png)
+
+**Smart**
+![smart](https://raw.githubusercontent.com/kenzok8/kenzok8/main/screenshot/clashoo-smart.png)
+
+**Sing-box**
+![singbox](https://raw.githubusercontent.com/kenzok8/kenzok8/main/screenshot/clashoo-singbox.png)
 
 </details>
 

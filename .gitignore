@@ -70,3 +70,4 @@ openwrt-clashoo-test/
 .DS_Store
 Thumbs.db
 scripts/compose_screenshots.py
+docs/
