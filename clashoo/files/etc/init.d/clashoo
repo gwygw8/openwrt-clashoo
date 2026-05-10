@@ -1649,7 +1649,11 @@ start_service(){
 				return 1
 			fi
 			if ! start_singbox_service; then
-				runtime_state_record_health "fail" "start:singbox_service_failed"
+				# 干测失败已写入 preflight:* detail，避免被外层兜底覆盖
+				case "$(grep '^health_detail=' "$RUNTIME_STATE_FILE" 2>/dev/null | cut -d= -f2-)" in
+					preflight:*) ;;
+					*) runtime_state_record_health "fail" "start:singbox_service_failed" ;;
+				esac
 				echo "Clashoo" > "$REAL_LOG"
 				return 1
 			fi
