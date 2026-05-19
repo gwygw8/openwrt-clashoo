@@ -260,7 +260,24 @@ prepare_singbox_runtime() {
 	return 0
 }
 
+_sync_singbox_binary() {
+	# 根据 dcore 把 /usr/bin/sing-box 同步成对应通道的 binary，让稳定版
+	# 与 Alpha 通过 /usr/bin/sing-box-stable / -alpha 分路径并存，互不覆盖。
+	# 老用户若分路径文件不存在则保留 /usr/bin/sing-box 现状（兼容首次升级）。
+	local dcore src
+	dcore="$(uci -q get clashoo.config.dcore 2>/dev/null)"
+	case "$dcore" in
+		4) src="/usr/bin/sing-box-stable" ;;
+		5) src="/usr/bin/sing-box-alpha" ;;
+		*) return 0 ;;
+	esac
+	[ -x "$src" ] || return 0
+	[ "$src" -ef /usr/bin/sing-box ] && return 0
+	ln -sf "$src" /usr/bin/sing-box
+}
+
 start_singbox_service() {
+	_sync_singbox_binary
 	if [ ! -x /usr/bin/sing-box ]; then
 		_log_runtime_error "sing-box core not found, please install the local sing-box binary first"
 		return 1
