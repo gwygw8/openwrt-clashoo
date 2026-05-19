@@ -780,8 +780,15 @@ smart_inject() {
 	sed -i '/^    uselightgbm:/d; /^    collectdata:/d; /^    prefer-asn:/d; /^    sample-rate:/d' "$CONFIG_YAML" 2>/dev/null
 	sed -i '/^    policy-priority:/d' "$CONFIG_YAML" 2>/dev/null
 	sed -i '/^lgbm-auto-update:/d; /^lgbm-url:/d; /^lgbm-update-interval:/d' "$CONFIG_YAML" 2>/dev/null
+	# 把 url-test/load-balance 改写回 url-test，撤销上一次注入留下的 type: smart
+	if command -v yq >/dev/null 2>&1; then
+		yq e -i '(.["proxy-groups"] // []) |= map(if .type == "smart" then .type = "url-test" else . end)' "$CONFIG_YAML" 2>/dev/null
+	fi
 
 	[ "${smart_auto:-0}" != "1" ] && return 0
+	# 只在实际跑 smart binary（core=1）时才注入 smart 专属字段，
+	# 否则切到标准 mihomo (core=2/3) 时 `type: smart` 会让内核拒绝启动。
+	[ "$(uci -q get clashoo.config.core 2>/dev/null)" = "1" ] || return 0
 
 	smart_priority=$(uci get clashoo.config.smart_policy_priority 2>/dev/null)
 	smart_asn=$(uci get clashoo.config.smart_prefer_asn 2>/dev/null)
