@@ -123,7 +123,9 @@ _detect_selected_core() {
 			return 1
 			;;
 		2|mihomo)
-			for _bin in /usr/bin/mihomo /usr/bin/clash-meta /etc/clashoo/clash-meta; do
+			# 稳定版：clash-meta 优先（用户主动下载的稳定通道写入此路径），
+			# IPK 自带的 /usr/bin/mihomo 是 auto-bump-alpha，不该被稳定版误选。
+			for _bin in /usr/bin/clash-meta /etc/clashoo/clash-meta /usr/bin/mihomo; do
 				[ -x "$_bin" ] && echo "$_bin" && return
 			done
 			return 1
