@@ -759,6 +759,38 @@ if (id == 'geoip') return file_mtime_label('/etc/clashoo/Country.mmdb') || '未�
 return '';
 }
 
+function mihomo_alpha_label(ver) {
+ver = ver || '';
+if (!ver) return '';
+if (match(ver, /^alpha-/)) return ver;
+if (match(ver, /^[0-9a-fA-F]{7,}$/)) return 'alpha-' + ver;
+return ver;
+}
+
+function component_installed_versions(id) {
+let out = {};
+if (id == 'mihomo') {
+	let stable = read_first_line('/usr/share/clashoo/clash_meta_version');
+	if (!stable && access('/usr/bin/clash-meta', 'x')) stable = core_short_version('/usr/bin/clash-meta');
+	let alpha = read_first_line('/usr/share/clashoo/mihomo_version');
+	if (match(alpha, /^smart-/)) alpha = '';
+	if (!alpha && access('/usr/bin/mihomo', 'x')) alpha = core_short_version('/usr/bin/mihomo');
+	out.stable = stable || '';
+	out.alpha = mihomo_alpha_label(alpha);
+	return out;
+}
+if (id == 'singbox') {
+	let stable = read_first_line('/usr/share/clashoo/singbox_stable_version');
+	if (!stable && access('/usr/bin/sing-box-stable', 'x')) stable = core_short_version('/usr/bin/sing-box-stable');
+	let alpha = read_first_line('/usr/share/clashoo/singbox_alpha_version');
+	if (!alpha && access('/usr/bin/sing-box-alpha', 'x')) alpha = core_short_version('/usr/bin/sing-box-alpha');
+	out.stable = stable || '';
+	out.alpha = alpha || '';
+	return out;
+}
+return out;
+}
+
 const B2_FEED_BASE = 'https://kenzo111.s3.us-west-004.backblazeb2.com/openwrt-feed';
 
 // Prerelease-Alpha 资源清单里抽版本 —— mihomo alpha / smart 是滚动版，
@@ -2026,6 +2058,7 @@ description: def.description,
 kind: def.kind || '',
 variant: !!def.variant,
 installed_version: component_installed_label(def.id),
+installed_versions: def.variant ? component_installed_versions(def.id) : {},
 status,
 message
 });

@@ -51,35 +51,40 @@ var CSS = [
   '.cl-log-tab{padding:4px 12px;border:1px solid rgba(128,128,128,.2);border-radius:20px;font-size:12px;cursor:pointer;opacity:.6}',
   '.cl-log-tab.active{opacity:1;font-weight:600;background:rgba(128,128,128,.1)}',
   '.cl-dl-hint{margin-top:6px;font-size:12px;min-height:18px;line-height:1.4}',
-  '.cl-component-card{padding:16px;border:1px solid rgba(128,128,128,.18);border-radius:10px;background:rgba(128,128,128,.05);margin-bottom:18px}',
+  '.cl-component-card{padding:16px 18px;border:1px solid var(--cl-surface-border,rgba(128,128,128,.14));border-radius:var(--border-radius,var(--cl-radius,12px));background:var(--cl-card-bg,#fff);box-shadow:var(--card-shadow,var(--cl-card-shadow));margin:0 14px 14px}',
   '.cl-component-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px}',
-  '.cl-component-head h4{margin:0 0 4px;font-size:14px;font-weight:700;color:var(--title-color,inherit);background:transparent !important;padding:0}',
+  '.cl-component-head h4{display:flex;align-items:center;gap:8px;margin:0 0 4px !important;padding:0 !important;font-size:0.95rem;font-weight:600;color:var(--title-color,var(--cl-title-color,inherit));background:transparent !important}',
+  '.cl-component-head h4:before{content:"";width:3px;height:14px;border-radius:2px;background:var(--primary-color,var(--cl-primary,#2f80ed));flex:0 0 3px}',
   '.cl-component-adv{margin-top:10px}',
-  '.cl-component-adv-bar{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;cursor:pointer;user-select:none;font-size:13px;font-weight:700;background:rgba(128,128,128,.06);border-radius:8px}',
-  '.cl-component-adv-bar:hover{background:rgba(128,128,128,.1)}',
+  '.cl-component-adv-bar{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;cursor:pointer;user-select:none;font-size:13px;font-weight:700;background:var(--cl-control-bg,rgba(128,128,128,.04));border:1px solid var(--cl-control-border,rgba(128,128,128,.14));border-radius:8px}',
+  '.cl-component-adv-bar:hover{background:var(--cl-primary-soft,rgba(0,122,255,.08))}',
   '.cl-component-adv-chevron{font-size:16px;font-weight:700;opacity:.55;transition:transform .2s}',
   '.cl-component-adv:not(.cl-closed) .cl-component-adv-chevron{transform:rotate(90deg)}',
   '.cl-component-adv-body{margin-top:8px}',
   '.cl-component-adv.cl-closed .cl-component-adv-body{display:none}',
   '.cl-component-sub{font-size:12px;color:rgba(120,130,150,.9);line-height:1.45}',
   '.cl-component-list{display:grid;gap:8px}',
-  '.cl-component-row{display:grid;grid-template-columns:minmax(170px,1.1fr) minmax(180px,1.5fr) minmax(130px,.9fr) auto;align-items:center;gap:10px;padding:10px 12px;border:1px solid rgba(128,128,128,.14);border-radius:8px;background:rgba(128,128,128,.045)}',
+  '.cl-component-row{display:grid;grid-template-columns:minmax(170px,1.1fr) minmax(180px,1.5fr) minmax(130px,.9fr) auto;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--cl-surface-border,rgba(128,128,128,.14));border-radius:8px;background:var(--cl-card-bg,#fff)}',
   '.cl-component-name{font-weight:700;font-size:13px}',
   '.cl-component-desc{font-size:12px;color:rgba(120,130,150,.92);margin-top:2px}',
   '.cl-component-version{font-size:12px;line-height:1.45;color:rgba(90,100,120,.95);word-break:break-word}',
   '.cl-theme-dark .cl-component-version{color:rgba(210,220,235,.86)}',
   '.cl-component-status{font-size:12px;line-height:1.45;color:rgba(90,100,120,.95)}',
   '.cl-component-status.cl-st-running{color:#2f80ed}.cl-component-status.cl-st-success{color:#239b56}.cl-component-status.cl-st-failed{color:#d43f3a}',
-  '.cl-component-log{margin-top:10px;font-family:monospace;font-size:11px;white-space:pre-wrap;max-height:140px;overflow:auto;padding:9px;border-radius:8px;background:rgba(128,128,128,.08);color:#4a8c63}',
+  '.cl-component-log{margin-top:10px;font-family:monospace;font-size:11px;white-space:pre-wrap;max-height:140px;overflow:auto;padding:9px;border:1px solid var(--cl-surface-border,rgba(128,128,128,.14));border-radius:8px;background:var(--cl-card-bg,#fff);color:#4a8c63}',
   '.cl-theme-dark .cl-component-log{color:#a3d9ad}',
   '.cl-component-arch{margin-bottom:12px}',
-  '.cl-component-arch-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:9px 12px;border:1px solid rgba(128,128,128,.14);border-radius:8px;background:rgba(128,128,128,.045)}',
+  '.cl-component-arch-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:9px 12px;border:1px solid var(--cl-surface-border,rgba(128,128,128,.14));border-radius:8px;background:var(--cl-card-bg,#fff)}',
   '.cl-component-arch-label{font-size:13px;font-weight:700}',
-  '.cl-component-arch-sel{font-size:12px;padding:4px 9px;border:1px solid rgba(128,128,128,.3);border-radius:6px;background:transparent;color:inherit}',
+  '.cl-component-arch-auto{font-size:12px;color:rgba(90,100,120,.82);line-height:1.2}',
+  '.cl-theme-dark .cl-component-arch-auto{color:rgba(210,220,235,.78)}',
+  '.cl-wrap .cl-component-arch-sel{font-size:12px!important;font-weight:700!important;padding:4px 9px!important;border:1px solid rgba(46,170,92,.28)!important;border-radius:6px!important;background:rgba(46,170,92,.12)!important;color:#24844d!important}',
+  '.cl-wrap.cl-theme-dark .cl-component-arch-sel{background:rgba(104,199,135,.16)!important;color:#c6f6d3!important;border-color:rgba(104,199,135,.3)!important}',
+  '.cl-component-arch-sel option{background:var(--background-color,#fff);color:inherit}',
   '.cl-component-arch-hint{font-size:12px;color:rgba(120,130,150,.9)}',
   '.cl-comp-var-box{display:inline-flex;gap:4px;margin-top:5px}',
-  '.cl-comp-var{font-size:11px;padding:2px 10px;border-radius:10px;border:1px solid rgba(128,128,128,.3);background:transparent;color:inherit;cursor:pointer}',
-  '.cl-comp-var.on{background:rgba(var(--primary-rgb,0,122,255),.14);border-color:rgba(var(--primary-rgb,0,122,255),.5);font-weight:700}',
+  '.cl-comp-var{font-size:11px;padding:2px 10px;border-radius:10px;border:1px solid rgba(128,128,128,.3);background:transparent;color:inherit;cursor:pointer;min-width:52px}',
+  '.cl-comp-var.on{background:rgba(var(--primary-rgb,0,122,255),.18);border-color:rgba(var(--primary-rgb,0,122,255),.64);color:var(--primary-color,#0b68dd);font-weight:800;box-shadow:0 0 0 1px rgba(var(--primary-rgb,0,122,255),.1) inset}',
   '.cl-comp-updatable{font-size:10px;font-weight:700;color:#239b56;margin-left:2px}',
   '@media(max-width:760px){.cl-component-head{display:block}.cl-component-head .btn{margin-top:10px}.cl-component-row{grid-template-columns:1fr;gap:6px}.cl-component-row .btn{width:auto;justify-self:start;padding-left:18px;padding-right:18px}}',
   /* 统一 form.Map 字体大小与 config 页一致 */
@@ -261,10 +266,10 @@ return view.extend({
       var link = document.createElement('link');
       link.id = 'cl-css-ext';
       link.rel = 'stylesheet';
-      link.href = L.resource('view/clashoo/clashoo.css') + '?v=20260502b1';
+      link.href = L.resource('view/clashoo/clashoo.css') + '?v=20260521a4';
       document.head.appendChild(link);
     } else {
-      document.getElementById('cl-css-ext').href = L.resource('view/clashoo/clashoo.css') + '?v=20260502b1';
+      document.getElementById('cl-css-ext').href = L.resource('view/clashoo/clashoo.css') + '?v=20260521a4';
     }
 
     var tabs = [
@@ -363,18 +368,22 @@ return view.extend({
       advWrap.classList.toggle('cl-closed');
     });
 
-    container.appendChild(E('div', { 'class': 'cl-component-card' }, [
-      E('div', { 'class': 'cl-component-head' }, [
-        E('div', {}, [
-          E('h4', {}, '组件更新'),
-          E('div', { 'class': 'cl-component-sub' }, '按组件单独更新，便于定位失败。点「检查更新」获取最新版本。')
+    /* 外层套一层 cl-component-map：复用 LuCI .cbi-map 容器结构，
+       浅色出现灰托盘、暗色满宽对齐，与下方表单卡片同构 */
+    container.appendChild(E('div', { 'class': 'cl-component-map' }, [
+      E('div', { 'class': 'cl-component-card' }, [
+        E('div', { 'class': 'cl-component-head' }, [
+          E('div', {}, [
+            E('h4', {}, '组件更新'),
+            E('div', { 'class': 'cl-component-sub' }, '按组件单独更新，便于定位失败。点「检查更新」获取最新版本。')
+          ]),
+          refreshBtn
         ]),
-        refreshBtn
-      ]),
-      archWrap,
-      listEl,
-      advWrap,
-      logEl
+        archWrap,
+        listEl,
+        advWrap,
+        logEl
+      ])
     ]));
 
     this._refreshComponentUpdatePanel(listEl, logEl, false);
@@ -403,12 +412,19 @@ return view.extend({
     return /^v?[0-9]/.test(comp.installed_version || '') ? 'stable' : 'alpha';
   },
 
+  _compInstalledVersion: function (comp, variant) {
+    if (comp && comp.installed_versions && comp.installed_versions[variant])
+      return comp.installed_versions[variant];
+    return (comp && comp.installed_version) || '';
+  },
+
   /* 已装版与最新版不一致即视为可更新（alpha 按 hash 字符串差异判断）*/
   _compUpdatable: function (comp, latestMap) {
     if (!comp || comp.kind === 'data') return false;
-    var inst = comp.installed_version || '';
+    var variant = this._compVariantOf(comp);
+    var inst = this._compInstalledVersion(comp, variant);
     if (!inst || inst === '未安装' || inst === '未知') return false;
-    var latest = latestMap[this._compLatestKey(comp, this._compVariantOf(comp))];
+    var latest = latestMap[this._compLatestKey(comp, variant)];
     if (!latest) return false;
     return this._compNorm(latest) !== this._compNorm(inst);
   },
@@ -422,7 +438,7 @@ return view.extend({
       return comp.message || '失败';
     if (globalRunning)
       return '等待当前任务完成';
-    return '空闲';
+    return '';
   },
 
   /* CPU 架构行：自动检测 + 可手动覆盖（写 download_core UCI，内核下载共用此值）*/
@@ -451,6 +467,7 @@ return view.extend({
     });
     var row = [
       E('span', { 'class': 'cl-component-arch-label' }, '处理器架构'),
+      E('span', { 'class': 'cl-component-arch-auto' }, '自动识别'),
       sel
     ];
     /* 自动检测正确时不显示提示，保持简洁；仅手动选了非检测值才提示推荐架构 */
@@ -473,7 +490,8 @@ return view.extend({
         self._compVariant[comp.id] = instStable ? 'stable' : 'alpha';
       variant = self._compVariant[comp.id];
       var mkV = function (v, label) {
-        var b = E('button', { 'class': 'cl-comp-var' + (variant === v ? ' on' : '') }, label);
+        var active = variant === v;
+        var b = E('button', { 'class': 'cl-comp-var' + (active ? ' on' : '') }, (active ? '✓ ' : '') + label);
         b.addEventListener('click', function (ev) {
           ev.preventDefault();
           self._compVariant[comp.id] = v;
@@ -481,8 +499,12 @@ return view.extend({
         });
         return b;
       };
-      variantBox = E('div', { 'class': 'cl-comp-var-box' }, [mkV('stable', '稳定'), mkV('alpha', 'Alpha')]);
+      variantBox = E('div', { 'class': 'cl-comp-var-box' }, [mkV('stable', '稳定版'), mkV('alpha', 'Alpha')]);
+      inst = this._compInstalledVersion(comp, variant) || inst;
     }
+    var latest = latestMap[this._compLatestKey(comp, variant || this._compVariantOf(comp))];
+    if (!statusText && latest)
+      statusText = '远端：' + latest;
 
     /* 绿色「可更新」徽标：最新版与已装不一致时显示 */
     var badge = this._compUpdatable(comp, latestMap)
