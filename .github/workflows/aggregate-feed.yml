@@ -37,12 +37,8 @@ jobs:
             "https://raw.githubusercontent.com/openwrt/openwrt/main/scripts/ipkg-make-index.sh"
           chmod +x ipkg-make-index.sh && sudo mv ipkg-make-index.sh /usr/local/bin/
 
-          # sha256 wrapper for ipkg-make-index.sh (expects "sha256 <file>" → checksum only)
-          cat <<'SHA256EOF' | sudo tee /usr/local/bin/sha256 >/dev/null
-#!/bin/sh
-exec sha256sum "$@" | awk '{print $1}'
-SHA256EOF
-          sudo chmod +x /usr/local/bin/sha256
+          # sha256: ipkg-make-index.sh needs this, symlink to sha256sum (both output <hash> <file>)
+          sudo ln -s /usr/bin/sha256sum /usr/local/bin/sha256
 
           # verify
           command -v usign && command -v apk.static && command -v ipkg-make-index.sh && command -v openssl && command -v sha256
