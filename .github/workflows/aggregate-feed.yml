@@ -18,13 +18,32 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Install tools
+        run: |
+          # usign: OpenWrt signing tool
+          sudo apt-get update -qq && sudo apt-get install -y -qq cmake libssl-dev
+          git clone --depth 1 https://github.com/openwrt/usign.git
+          cd usign && cmake . && make -j$(nproc) && sudo cp usign /usr/local/bin/
+
+          # apk.static: Alpine package manager (for mkndx)
+          curl -fsSL -o apk.static \
+            "https://gitlab.alpinelinux.org/alpine/apk-tools/-/jobs/artifacts/master/raw/apk.static?job=static-x86_64"
+          [ -s apk.static ] && chmod +x apk.static && sudo mv apk.static /usr/local/bin/apk.static
+
+          # ipkg-make-index.sh
+          curl -fsSL -o ipkg-make-index.sh \
+            "https://raw.githubusercontent.com/openwrt/openwrt/main/scripts/ipkg-make-index.sh"
+          chmod +x ipkg-make-index.sh && sudo mv ipkg-make-index.sh /usr/local/bin/
+
+          # verify
+          command -v usign && command -v apk.static && command -v ipkg-make-index.sh && command -v openssl
+
       - name: Prepare rclone
         env:
           B2_KEY_ID: ${{ secrets.B2_KEY_ID }}
           B2_APPLICATION_KEY: ${{ secrets.B2_APPLICATION_KEY }}
         run: |
           [ -z "$B2_KEY_ID" ] && { echo "No B2 credentials"; exit 1; }
-          [ -z "$B2_APPLICATION_KEY" ] && { echo "No B2 application key"; exit 1; }
           curl -fsSL https://rclone.org/install.sh | sudo bash
           mkdir -p ~/.config/rclone
           cat > ~/.config/rclone/rclone.conf <<EOF
@@ -35,19 +54,19 @@ jobs:
           hard_delete = true
           EOF
 
-      - name: Download project feeds
+      - name: Merge project feeds
         env:
           B2_BUCKET: ${{ secrets.B2_BUCKET }}
         run: |
           [ -z "$B2_BUCKET" ] && { echo "No B2 bucket"; exit 1; }
-          mkdir -p aggregate/clashoo aggregate/daed aggregate/jell merged
+          mkdir -p aggregate/clashoo aggregate/daed aggregate/jell merged keys
           rclone copy "b2:${B2_BUCKET}/openwrt-feed/clashoo/" aggregate/clashoo/ --fast-list || true
           rclone copy "b2:${B2_BUCKET}/openwrt-feed/daed/" aggregate/daed/ --fast-list || true
           rclone copy "b2:${B2_BUCKET}/openwrt-feed/jell/" aggregate/jell/ --fast-list || true
 
           for project in clashoo daed jell; do
             [ -d "aggregate/${project}" ] || continue
-            find "aggregate/${project}" -mindepth 2 -maxdepth 2 -type d | while read -r dir; do
+            find "aggregate/${project}" -mindepth 2 -maxdepth 2 -type d | while IFS= read -r dir; do
               sdk=$(basename "$(dirname "$dir")")
               arch=$(basename "$dir")
               target="merged/${sdk}/${arch}"
@@ -56,6 +75,7 @@ jobs:
             done
           done
 
+          find merged -type f ! -name '*.apk' ! -name '*.ipk' -delete
           find merged -type f | sort
           find merged -type f | grep -q . || { echo "No packages to aggregate"; exit 1; }
 
@@ -68,57 +88,38 @@ jobs:
           [ -z "$PRIVATE_KEY" ] && { echo "No APK signing key"; exit 1; }
           printf '%s\n' "$KEY_BUILD" > key-build
           printf '%s\n' "$PRIVATE_KEY" > private-key.pem
-          chmod -R a+w merged/
 
-          git clone --depth 1 https://github.com/openwrt/gh-action-sdk.git sdk-action
-          docker build -t sdk-tools --build-arg ARCH=x86_64-openwrt-25.12 sdk-action
-          docker run --rm --user root \
-            -v "$PWD/merged":/work \
-            -v "$PWD/key-build":/keys/key-build:ro \
-            -v "$PWD/private-key.pem":/keys/private-key.pem:ro \
-            sdk-tools bash -c '
-              set -eu
-              mkdir -p /artifacts && chmod 777 /artifacts
-              bash setup.sh
-              export PATH="$PWD/staging_dir/host/bin:$PATH"
-              if [ ! -x "$PWD/staging_dir/host/bin/sha256" ]; then
-                printf "#!/bin/sh\nexec mkhash sha256 \"\$@\"\n" > "$PWD/staging_dir/host/bin/sha256"
-                chmod +x "$PWD/staging_dir/host/bin/sha256"
-              fi
-              for dir in /work/*/*; do
-                [ -d "$dir" ] || continue
-                cd "$dir"
-                if ls ./*.apk >/dev/null 2>&1; then
-                  rm -f packages.adb packages.adb.* APKINDEX*
-                  "$PWD/staging_dir/host/bin/apk" mkndx --allow-untrusted --sign-key /keys/private-key.pem --output packages.adb ./*.apk
-                fi
-                if ls ./*.ipk >/dev/null 2>&1; then
-                  rm -f Packages Packages.gz Packages.sig
-                  "$PWD/scripts/ipkg-make-index.sh" . > Packages
-                  gzip -9nc Packages > Packages.gz
-                  "$PWD/staging_dir/host/bin/usign" -S -m Packages -s /keys/key-build
-                fi
-              done
-              mkdir -p /work/keys
-              "$PWD/staging_dir/host/bin/usign" -F -p /work/keys/dllkids-feed.pub -s /keys/key-build
-              cp /keys/private-key.pem /work/keys/
-            '
+          for dir in merged/*/*; do
+            [ -d "$dir" ] || continue
+            echo "Indexing $dir"
+            if ls "$dir"/*.apk >/dev/null 2>&1; then
+              rm -f "$dir"/packages.adb "$dir"/packages.adb.* "$dir"/APKINDEX*
+              apk.static mkndx --allow-untrusted --sign-key private-key.pem --output "$dir/packages.adb" "$dir"/*.apk
+            fi
+            if ls "$dir"/*.ipk >/dev/null 2>&1; then
+              rm -f "$dir"/Packages "$dir"/Packages.gz "$dir"/Packages.sig
+              ipkg-make-index.sh "$dir" > "$dir/Packages"
+              gzip -9nc "$dir/Packages" > "$dir/Packages.gz"
+              usign -S -m "$dir/Packages" -s key-build
+            fi
+          done
 
-      - name: Upload keys and feed
+          # Derive public keys
+          usign -F -p keys/dllkids-feed.pub -s key-build
+          openssl ec -pubout -in private-key.pem -out keys/dllkids-feed.pub.pem
+
+          [ -s keys/dllkids-feed.pub ] || { echo "ERROR: OPKG public key empty"; exit 1; }
+          [ -s keys/dllkids-feed.pub.pem ] || { echo "ERROR: APK public key empty"; exit 1; }
+
+      - name: Upload
         env:
           B2_BUCKET: ${{ secrets.B2_BUCKET }}
         run: |
-          # Derive APK public key from private key
-          ls -la merged/keys/
-          openssl ec -pubout -in merged/keys/private-key.pem -out merged/keys/dllkids-feed.pub.pem
-          rm -f merged/keys/private-key.pem
+          # Upload keys (static, but keep them fresh)
+          rclone copy keys/ "b2:${B2_BUCKET}/openwrt-feed/keys/" --checksum --fast-list
 
-          [ -s merged/keys/dllkids-feed.pub ] || { echo "ERROR: OPKG public key missing"; exit 1; }
-          [ -s merged/keys/dllkids-feed.pub.pem ] || { echo "ERROR: APK public key missing"; exit 1; }
-
-          rclone copy merged/keys/ "b2:${B2_BUCKET}/openwrt-feed/keys/" --checksum --fast-list
-
-          find merged -mindepth 2 -maxdepth 2 -type d | while read -r dir; do
+          # Upload unified feed indexes
+          find merged -mindepth 2 -maxdepth 2 -type d | while IFS= read -r dir; do
             sdk=$(basename "$(dirname "$dir")")
             arch=$(basename "$dir")
             rclone purge "b2:${B2_BUCKET}/openwrt-feed/${sdk}/${arch}" || true
