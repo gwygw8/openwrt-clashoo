@@ -21,10 +21,12 @@ jobs:
 
           usign -F -s key-build > /tmp/opkg-pub.key
 
-          echo "=== OPKG_PUB_KEY ==="
-          cat /tmp/opkg-pub.key
-          echo "=== END OPKG_PUB_KEY ==="
+          echo "=== OPKG_PUB_B64 ==="
+          base64 -w0 /tmp/opkg-pub.key
+          echo ""
+          echo "=== END OPKG_PUB_B64 ==="
 
-          echo "=== APK_PUB_KEY ==="
-          openssl ec -pubout -in private-key.pem 2>/dev/null
-          echo "=== END APK_PUB_KEY ==="
+          echo "=== APK_PUB_B64 ==="
+          openssl ec -pubout -in private-key.pem 2>/dev/null | base64 -w0
+          echo ""
+          echo "=== END APK_PUB_B64 ==="
