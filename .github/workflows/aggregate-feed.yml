@@ -84,18 +84,19 @@ jobs:
                 printf "#!/bin/sh\nexec mkhash sha256 \"\$@\"\n" > "$PWD/staging_dir/host/bin/sha256"
                 chmod +x "$PWD/staging_dir/host/bin/sha256"
               fi
+              SDK_DIR="$PWD"
               for dir in /work/[0-9]*/*; do
                 [ -d "$dir" ] || continue
                 cd "$dir"
                 if ls ./*.apk >/dev/null 2>&1; then
                   rm -f packages.adb packages.adb.* APKINDEX*
-                  "$PWD/staging_dir/host/bin/apk" mkndx --allow-untrusted --sign-key /keys/private-key.pem --output packages.adb ./*.apk
+                  "$SDK_DIR/staging_dir/host/bin/apk" mkndx --allow-untrusted --sign-key /keys/private-key.pem --output packages.adb ./*.apk
                 fi
                 if ls ./*.ipk >/dev/null 2>&1; then
                   rm -f Packages Packages.gz Packages.sig
-                  "$PWD/scripts/ipkg-make-index.sh" . > Packages
+                  "$SDK_DIR/scripts/ipkg-make-index.sh" . > Packages
                   gzip -9nc Packages > Packages.gz
-                  "$PWD/staging_dir/host/bin/usign" -S -m Packages -s /keys/key-build
+                  "$SDK_DIR/staging_dir/host/bin/usign" -S -m Packages -s /keys/key-build
                 fi
               done
             '
