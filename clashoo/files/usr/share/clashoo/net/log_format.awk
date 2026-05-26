@@ -1,15 +1,14 @@
 # clashoo 运行日志格式化
-# 输入: /usr/share/clashoo/clashoo.txt 混合格式
 # 输出: MM-DD HH:MM:SS msg
 
-# mihomo 原生行
+# mihomo 原生行: time="YYYY-MM-DDTHH:MM:SS..." level=... msg="..."
 /^time="[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T[0-9][0-9]:[0-9][0-9]:[0-9][0-9]/ {
-	ts = ""
-	if (match($0, /^time="([0-9][0-9][0-9][0-9])-([0-9][0-9])-([0-9][0-9])T([0-9][0-9]:[0-9][0-9]:[0-9][0-9])/, arr)) {
-		utc_h = substr(arr[4], 1, 2) + 0
-		cst_h = (utc_h + 8) % 24
-		ts = sprintf("%s-%s %02d:%s", arr[2], arr[3], cst_h, substr(arr[4], 4))
-	}
+	# extract YYYY-MM-DD and HH:MM:SS
+	ts_date = substr($0, 7, 5)      # MM-DD
+	ts_time = substr($0, 18, 8)     # HH:MM:SS
+	utc_h = substr(ts_time, 1, 2) + 0
+	cst_h = (utc_h + 8) % 24
+	ts = sprintf("%s %02d:%s", ts_date, cst_h, substr(ts_time, 4))
 
 	prefix = ""
 	if (match($0, /level=warning /)) prefix = " [warn]"
@@ -27,17 +26,14 @@
 	next
 }
 
-# log_msg 人工行: 保留月-日 时:分:秒
+# log_msg 行: "  YYYY-MM-DD HH:MM:SS - msg" → "MM-DD HH:MM:SS msg"
 /^[[:space:]]+[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9][[:space:]]+[0-9][0-9]:[0-9][0-9]:[0-9][0-9]/ {
-	ts = substr($0, 1, 30)
-	gsub(/^[[:space:]]+/, "", ts)
-	sub(/[[:space:]]+$/, "", ts)
-	# extract MM-DD HH:MM:SS from "YYYY-MM-DD HH:MM:SS"
-	if (match(ts, /[0-9][0-9][0-9][0-9]-([0-9][0-9]-[0-9][0-9]) ([0-9][0-9]:[0-9][0-9]:[0-9][0-9])/, arr)) {
-		ts = arr[1] " " arr[2]
-	}
-	sub(/^[[:space:]]+[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9][[:space:]]+[0-9][0-9]:[0-9][0-9]:[0-9][0-9][[:space:]]*-?[[:space:]]*/, "")
-	print ts " " $0
+	gsub(/^[[:space:]]+/, "")           # trim leading space
+	ts_date = substr($0, 6, 5)          # MM-DD
+	ts_time = substr($0, 12, 8)         # HH:MM:SS
+	# remove "YYYY-MM-DD HH:MM:SS - " prefix
+	sub(/^[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9][[:space:]]+[0-9][0-9]:[0-9][0-9]:[0-9][0-9][[:space:]]*-[[:space:]]*/, "")
+	print ts_date " " ts_time " " $0
 	next
 }
 
