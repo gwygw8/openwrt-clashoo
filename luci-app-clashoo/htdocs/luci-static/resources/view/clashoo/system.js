@@ -889,16 +889,17 @@ return view.extend({
       return 'cl-log-error';
     }
 
+    var MONTHS = { Jan:'01',Feb:'02',Mar:'03',Apr:'04',May:'05',Jun:'06',Jul:'07',Aug:'08',Sep:'09',Oct:'10',Nov:'11',Dec:'12' };
     /* render a single line as colored HTML */
     function buildLine(ln) {
       var cls = detectLevel(ln);
       var ts = '', msg = ln;
-      /* plugin / update: YYYY-MM-DD HH:MM:SS - message */
-      var pm = ln.match(/^(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})\s+-\s+(.*)$/);
-      if (pm) { ts = pm[1]; msg = pm[2]; }
-      /* core syslog: Mon DD HH:MM:SS YYYY daemon.level binary[pid]: message */
-      var cm = ln.match(/^\w{3}\s+\d{1,2}\s+(\d{2}:\d{2}:\d{2})\s+\d{4}\s+\S+\.(\S+)\s+\S+\[\d+\]:\s+(.*)$/);
-      if (cm) { ts = cm[1]; msg = cm[3] || ln; }
+      /* plugin / update: YYYY-MM-DD HH:MM:SS → MM-DD HH:MM:SS */
+      var pm = ln.match(/^\d{4}-(\d{2}-\d{2})\s+(\d{2}:\d{2}:\d{2})\s+-\s+(.*)$/);
+      if (pm) { ts = pm[1] + ' ' + pm[2]; msg = pm[3]; }
+      /* core syslog: Mon DD HH:MM:SS YYYY → MM-DD HH:MM:SS */
+      var cm = ln.match(/^(\w{3})\s+(\d{1,2})\s+(\d{2}:\d{2}:\d{2})\s+\d{4}\s+\S+\.(\S+)\s+\S+\[\d+\]:\s+(.*)$/);
+      if (cm) { ts = (MONTHS[cm[1]] || cm[1]) + '-' + cm[2].padStart(2,'0') + ' ' + cm[3]; msg = cm[5] || ln; }
       if (ts) {
         return '<div class="cl-log-line ' + cls + '"><span class="cl-log-ts">' + esc(ts) + '</span><span class="cl-log-msg">' + esc(msg) + '</span></div>';
       }
