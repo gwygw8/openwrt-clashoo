@@ -1,0 +1,112 @@
+name: Aggregate Unified Feed
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 * * * *'
+
+concurrency:
+  group: aggregate-unified-feed
+  cancel-in-progress: false
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  aggregate:
+    name: Merge and sign feed
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Prepare rclone
+        env:
+          B2_KEY_ID: ${{ secrets.B2_KEY_ID }}
+          B2_APPLICATION_KEY: ${{ secrets.B2_APPLICATION_KEY }}
+        run: |
+          [ -z "$B2_KEY_ID" ] && { echo "No B2 credentials"; exit 1; }
+          [ -z "$B2_APPLICATION_KEY" ] && { echo "No B2 application key"; exit 1; }
+          curl -fsSL https://rclone.org/install.sh | sudo bash
+          mkdir -p ~/.config/rclone
+          cat > ~/.config/rclone/rclone.conf <<EOF
+          [b2]
+          type = b2
+          account = ${B2_KEY_ID}
+          key = ${B2_APPLICATION_KEY}
+          hard_delete = true
+          EOF
+
+      - name: Download project feeds
+        env:
+          B2_BUCKET: ${{ secrets.B2_BUCKET }}
+        run: |
+          [ -z "$B2_BUCKET" ] && { echo "No B2 bucket"; exit 1; }
+          mkdir -p aggregate/clashoo aggregate/daed aggregate/jell merged
+          rclone copy "b2:${B2_BUCKET}/openwrt-feed/clashoo/" aggregate/clashoo/ --fast-list || true
+          rclone copy "b2:${B2_BUCKET}/openwrt-feed/daed/" aggregate/daed/ --fast-list || true
+          rclone copy "b2:${B2_BUCKET}/openwrt-feed/jell/" aggregate/jell/ --fast-list || true
+
+          for project in clashoo daed jell; do
+            [ -d "aggregate/${project}" ] || continue
+            find "aggregate/${project}" -mindepth 2 -maxdepth 2 -type d | while read -r dir; do
+              sdk=$(basename "$(dirname "$dir")")
+              arch=$(basename "$dir")
+              target="merged/${sdk}/${arch}"
+              mkdir -p "$target"
+              find "$dir" -maxdepth 1 -type f \( -name '*.apk' -o -name '*.ipk' \) -exec cp -v {} "$target/" \;
+            done
+          done
+
+          find merged -type f | sort
+          find merged -type f | grep -q . || { echo "No packages to aggregate"; exit 1; }
+
+      - name: Generate signed indexes
+        env:
+          KEY_BUILD: ${{ secrets.OPKG_KEY_BUILD }}
+          PRIVATE_KEY: ${{ secrets.APK_PRIVATE_KEY }}
+        run: |
+          [ -z "$KEY_BUILD" ] && { echo "No OPKG signing key"; exit 1; }
+          [ -z "$PRIVATE_KEY" ] && { echo "No APK signing key"; exit 1; }
+          printf '%s\n' "$KEY_BUILD" > key-build
+          printf '%s\n' "$PRIVATE_KEY" > private-key.pem
+
+          git clone --depth 1 https://github.com/openwrt/gh-action-sdk.git sdk-action
+          docker build -t openwrt-sdk-tools --build-arg ARCH=x86_64-openwrt-25.12 sdk-action
+          docker run --rm --entrypoint bash \
+            -v "$PWD/merged":/work \
+            -v "$PWD/key-build":/keys/key-build:ro \
+            -v "$PWD/private-key.pem":/keys/private-key.pem:ro \
+            openwrt-sdk-tools -lc '
+              set -eu
+              cd /builder 2>/dev/null || cd "$(find / -path "*/scripts/ipkg-make-index.sh" -type f 2>/dev/null | head -n 1 | sed "s#/scripts/ipkg-make-index.sh##")"
+              [ ! -f setup.sh ] || bash setup.sh
+              apk_bin="$PWD/staging_dir/host/bin/apk"
+              usign_bin="$PWD/staging_dir/host/bin/usign"
+              ipkg_index="$PWD/scripts/ipkg-make-index.sh"
+
+              for dir in /work/*/*; do
+                [ -d "$dir" ] || continue
+                cd "$dir"
+                if ls ./*.apk >/dev/null 2>&1; then
+                  rm -f packages.adb packages.adb.* APKINDEX*
+                  "$apk_bin" mkndx --allow-untrusted --sign-key /keys/private-key.pem --output packages.adb ./*.apk
+                fi
+                if ls ./*.ipk >/dev/null 2>&1; then
+                  rm -f Packages Packages.gz Packages.sig
+                  "$ipkg_index" . > Packages
+                  gzip -9nc Packages > Packages.gz
+                  "$usign_bin" -S -m Packages -s /keys/key-build
+                fi
+              done
+            '
+
+      - name: Upload unified feed
+        env:
+          B2_BUCKET: ${{ secrets.B2_BUCKET }}
+        run: |
+          find merged -mindepth 2 -maxdepth 2 -type d | while read -r dir; do
+            sdk=$(basename "$(dirname "$dir")")
+            arch=$(basename "$dir")
+            remote="b2:${B2_BUCKET}/openwrt-feed/${sdk}/${arch}"
+            rclone purge "$remote" || true
+            rclone copy "$dir/" "$remote/" --checksum --fast-list --transfers 8 --checkers 16
+          done

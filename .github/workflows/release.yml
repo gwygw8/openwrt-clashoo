@@ -276,6 +276,9 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     if: ${{ !cancelled() }}
+    permissions:
+      actions: write
+      contents: read
 
     steps:
       - name: Download artifacts
@@ -317,7 +320,7 @@ jobs:
                 echo "core=$core"
                 echo "luci=$luci"
                 [ -n "$i18n" ] && echo "i18n=$i18n"
-              } > "$target/manifest.txt"
+              } > "$target/manifest-clashoo.txt"
             fi
           done
           find feed -type f | sort
@@ -340,9 +343,15 @@ jobs:
           EOF
           # feed/ 为空时跳过，避免空目录把 B2 上已有产物全删
           find feed -type f | grep -q . || { echo "feed empty, skip sync"; exit 0; }
-          # sync 而非 copy：B2 只保留本次最新产物，旧版本包同步删除
-          rclone sync feed/ "b2:${B2_BUCKET}/openwrt-feed/" \
+          rclone sync feed/ "b2:${B2_BUCKET}/openwrt-feed/clashoo/" \
             --checksum \
             --fast-list \
             --transfers 8 \
             --checkers 16
+
+      - name: Trigger unified feed aggregation
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run aggregate-feed.yml -R "$GITHUB_REPOSITORY" --ref "${GITHUB_REF_NAME:-main}" || \
+            echo "Aggregate trigger failed; scheduled workflow will retry."

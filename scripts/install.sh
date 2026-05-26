@@ -2,7 +2,9 @@
 
 set -eu
 
-B2_FEED_BASE_URL="https://kenzo111.s3.us-west-004.backblazeb2.com/openwrt-feed"
+B2_FEED_BASE_URL="https://kenzo111.s3.us-west-004.backblazeb2.com/openwrt-feed/clashoo"
+GITHUB_API_URL="https://api.github.com/repos/kenzok8/openwrt-clashoo/releases/latest"
+GITHUB_PROXY_PREFIX="${GITHUB_PROXY_PREFIX:-https://ghfast.top/}"
 TMP_DIR="/tmp/clashoo-install"
 
 fetch_text() {
@@ -26,6 +28,18 @@ download_file() {
     return $?
   fi
   wget -qO "$out" "$url"
+}
+
+download_url() {
+  url="$1"
+  case "$url" in
+    https://github.com/*)
+      printf '%s%s\n' "$GITHUB_PROXY_PREFIX" "$url"
+      ;;
+    *)
+      printf '%s\n' "$url"
+      ;;
+  esac
 }
 
 detect_manager() {
@@ -129,7 +143,7 @@ load_manifest_urls() {
   sdk="$1"
   arch="$2"
   base="$(feed_base_for "$sdk" "$arch")"
-  manifest_url="${base}/manifest.txt"
+  manifest_url="${base}/manifest-clashoo.txt"
   manifest_text="$(fetch_text "$manifest_url" || true)"
   [ -n "$manifest_text" ] || return 1
 
@@ -171,6 +185,30 @@ load_opkg_feed_urls() {
   return 0
 }
 
+load_github_urls() {
+  arch="$1"
+  ext="$2"
+  payload="$(fetch_text "$GITHUB_API_URL" || true)"
+  [ -n "$payload" ] || return 1
+
+  urls="$(printf '%s\n' "$payload" | sed -n 's/.*"browser_download_url":[[:space:]]*"\([^"]*\)".*/\1/p')"
+  [ -n "$urls" ] || return 1
+
+  if [ "$ext" = "apk" ]; then
+    CORE_URL="$(printf '%s\n' "$urls" | grep -E '/clashoo-[^-]+.*-r[0-9]+-'"$arch"'\.apk$' | head -n 1)"
+    LUCI_URL="$(printf '%s\n' "$urls" | grep -E '/luci-app-clashoo-[^-]+.*-r[0-9]+-('"$arch"'|all)\.apk$' | head -n 1)"
+    I18N_URL="$(printf '%s\n' "$urls" | grep -E '/luci-i18n-clashoo-zh-cn-[^-]+.*-r[0-9]+-('"$arch"'|all)\.apk$' | head -n 1)"
+  else
+    CORE_URL="$(printf '%s\n' "$urls" | grep -E '/clashoo_.*_'"$arch"'\.ipk$' | head -n 1)"
+    LUCI_URL="$(printf '%s\n' "$urls" | grep -E '/luci-app-clashoo_.*_all\.ipk$' | head -n 1)"
+    I18N_URL="$(printf '%s\n' "$urls" | grep -E '/luci-i18n-clashoo-zh-cn_.*_all\.ipk$' | head -n 1)"
+  fi
+
+  [ -n "$CORE_URL" ] || return 1
+  [ -n "$LUCI_URL" ] || return 1
+  return 0
+}
+
 PM="$(detect_manager)"
 if [ "$PM" = "unsupported" ]; then
   echo "No supported package manager found (opkg/apk)."
@@ -203,20 +241,24 @@ if [ -n "$SDK_CANDIDATES" ]; then
 fi
 
 if [ -z "$CORE_URL" ] || [ -z "$LUCI_URL" ]; then
-  echo "Cannot find required B2 packages for arch: $ARCH"
-  echo "Detected package manager: $PM"
-  echo "Tried SDKs: $SDK_CANDIDATES"
-  exit 1
+  if load_github_urls "$ARCH" "$EXT"; then
+    echo "Using GitHub latest release"
+  else
+    echo "Cannot find required packages for arch: $ARCH"
+    echo "Detected package manager: $PM"
+    echo "Tried SDKs: $SDK_CANDIDATES"
+    exit 1
+  fi
 fi
 
 rm -rf "$TMP_DIR"
 mkdir -p "$TMP_DIR"
 
 echo "Downloading packages..."
-download_file "$CORE_URL" "$TMP_DIR/core.${EXT}"
-download_file "$LUCI_URL" "$TMP_DIR/luci.${EXT}"
+download_file "$(download_url "$CORE_URL")" "$TMP_DIR/core.${EXT}"
+download_file "$(download_url "$LUCI_URL")" "$TMP_DIR/luci.${EXT}"
 if [ -n "$I18N_URL" ]; then
-  download_file "$I18N_URL" "$TMP_DIR/i18n.${EXT}"
+  download_file "$(download_url "$I18N_URL")" "$TMP_DIR/i18n.${EXT}"
 fi
 
 echo "Installing packages with $PM..."
