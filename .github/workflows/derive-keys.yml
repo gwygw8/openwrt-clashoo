@@ -19,13 +19,12 @@ jobs:
           printf '%s\n' "$KEY_BUILD" > key-build
           printf '%s\n' "$PRIVATE_KEY" > private-key.pem
 
-          echo ""
-          echo "=== OPKG_PUB_KEY (paste this value into secret OPKG_PUB_KEY) ==="
-          usign -F -p /dev/stdout -s key-build | base64 -w0
-          echo ""
-          echo "=== END OPKG_PUB_KEY ==="
-          echo ""
+          usign -F -p /tmp/opkg-pub.key -s key-build
 
-          echo "=== APK_PUB_KEY (paste this value into secret APK_PUB_KEY) ==="
+          echo "=== OPKG_PUB_KEY ==="
+          cat /tmp/opkg-pub.key
+          echo "=== END OPKG_PUB_KEY ==="
+
+          echo "=== APK_PUB_KEY ==="
           openssl ec -pubout -in private-key.pem 2>/dev/null
           echo "=== END APK_PUB_KEY ==="
