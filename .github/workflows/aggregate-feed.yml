@@ -87,17 +87,23 @@ jobs:
               SDK_DIR="$PWD"
               for dir in /work/[0-9]*/*; do
                 [ -d "$dir" ] || continue
+                echo "==> Processing $dir"
                 cd "$dir"
                 if ls ./*.apk >/dev/null 2>&1; then
+                  echo "  APK: generating packages.adb for $(ls ./*.apk | wc -l) packages"
                   rm -f packages.adb packages.adb.* APKINDEX*
                   "$SDK_DIR/staging_dir/host/bin/apk" mkndx --allow-untrusted --sign-key /keys/private-key.pem --output packages.adb ./*.apk
+                  echo "  APK: packages.adb created ($(wc -c < packages.adb) bytes)"
                 fi
                 if ls ./*.ipk >/dev/null 2>&1; then
+                  echo "  IPK: generating Packages for $(ls ./*.ipk | wc -l) packages"
                   rm -f Packages Packages.gz Packages.sig
                   "$SDK_DIR/scripts/ipkg-make-index.sh" . > Packages
                   gzip -9nc Packages > Packages.gz
                   "$SDK_DIR/staging_dir/host/bin/usign" -S -m Packages -s /keys/key-build
+                  echo "  IPK: Packages created, signed"
                 fi
+                echo "  Done: $(ls | tr '\n' ' ')"
               done
             '
 
