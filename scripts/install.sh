@@ -270,8 +270,11 @@ fi
 
 echo "Installing packages with $PM..."
 if [ "$PM" = "opkg" ]; then
+  # Refresh package lists so deps (yq, coreutils-nohup, kmod-*) resolve on fresh systems
+  opkg update || echo "Warning: opkg update failed, dependency resolution may break"
   opkg install "$TMP_DIR/core.${EXT}" "$TMP_DIR/luci.${EXT}" ${I18N_URL:+"$TMP_DIR/i18n.${EXT}"}
 else
+  apk update || echo "Warning: apk update failed, dependency resolution may break"
   apk add --allow-untrusted "$TMP_DIR/core.${EXT}" "$TMP_DIR/luci.${EXT}" ${I18N_URL:+"$TMP_DIR/i18n.${EXT}"}
 fi
 
